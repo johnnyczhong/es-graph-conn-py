@@ -9,9 +9,10 @@ port = '9200'
 def hello():
 	return "Hello Person!"
 
-# @app.route('/{}/user/<uid>'.format(index), methods = ['GET'])
-@app.route('/<index>/user/<int:uid>', methods = ['GET'])
-def getUserConnections(index, uid):
+@app.route('/<index>/user/<int:uid>/connections/all', methods = ['GET'])
+def getAllUserConnections(index, uid):
+	# todo: validate uid (bounds)
+
 	iTime = time.time()
 
 	# init objects
@@ -28,6 +29,32 @@ def getUserConnections(index, uid):
 	str3rd = 'Num 3rd degree connections: {}'.format(len(queryUser.conn3d))
 	return '{} \n{} \n{} \nTook {}s'.format(str1st, str2nd, str3rd, (fTime - iTime))
 
+
+@app.route('/<index>/user/<int:uid>/connections/<int:conn>', methods = ['GET'])
+def getSingleDegreeConnections(index, uid, conn):
+	# todo: validate uid (out of bounds)
+
+	iTime = time.time()
+
+	queryUser = Connections.User(uid)
+	gc = Connections.GraphApi(host, port, index)
+
+	if conn == 1:
+		queryUser.set1dConn(gc)
+		retString = 'Num 1st Degree Connections: {}'.format(len(queryUser.conn1d))
+	elif conn == 2:
+		queryUser.set1and2dConn(gc)
+		retString = 'Num 2nd Degree Connections: {}'.format(len(queryUser.conn2d))
+	elif conn == 3:
+		queryUser.set1and2dConn(gc)
+		queryUser.set3dConn(gc)
+		retString = 'Num 3rd Degree Connections: {}'.format(len(queryUser.conn3d))
+	else:
+		return 'Please provide a number between 1-3.'
+
+	fTime = time.time()
+	retString += ' Took: {}'.format(fTime - iTime)
+	return retString
 
 if __name__ == '__main__':
 	app.run()
