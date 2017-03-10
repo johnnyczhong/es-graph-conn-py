@@ -22,12 +22,19 @@ class User:
 		self.conn2d = None
 		self.conn3d = None
 
+	def set1dConn(self, graphConn):
+		resp = graphConn.makeRequest((self.uid,), 1)
+		connections = graphConn.parseVertices(resp)
+		self.conn1d = connections['conn']
+
 	def set1and2dConn(self, graphConn):
 		resp = graphConn.makeRequest((self.uid,), 2)
 		connections = graphConn.parseVertices(resp)
 		self.conn1d = connections['uid'] 
 		self.conn2d = connections['conn']
 
+
+	# requires that conn2d and conn1d be set
 	def set3dConn(self, graphConn):
 		resp = graphConn.makeRequest(self.conn2d, 1, excludes = self.conn1d)
 		connections = graphConn.parseVertices(resp)
@@ -41,12 +48,6 @@ class GraphApi:
 
 	def buildReqBody(self, uidList, degree, excludes = None):
 		strList = [str(x) for x in uidList]
-
-		# testing with terminal value
-		# if excludes:
-		# 	excludes = excludes + [-1]
-		# else:
-		# 	excludes = [-1]
 
 		# remove false positives (looping back to self)
 		if not excludes:
@@ -96,7 +97,7 @@ class GraphApi:
 		return reqBody
 
 
-	# purpose: interface to elasticsearch graph endpoint
+	# purpose: interface to elasticsearch /_graph/explore endpoint
 	def makeRequest(self, uidList, degree, excludes = None):
 		reqBody = self.buildReqBody(uidList, degree, excludes)
 
@@ -107,7 +108,6 @@ class GraphApi:
 		respContent = json.loads(resp.read().decode())
 
 		return respContent
-
 
 
 	# purpose: returns connections that are not self
@@ -130,17 +130,24 @@ class GraphApi:
 def main():
 	# todo: pass query params as args via cmdline
 
+	# tests
+
 	initTime = time.time()
 	print('userId: {}'.format(testId))
 
 	newUser = User(testId)
 	gc = GraphApi(host, port, esIndex)
 
+	newUser.set1dConn(gc)
+
+	sorted1 = newUser.conn1d.sort()
+	print('Just 1d connection: {}'.format(newUser.conn1d))
+
 	newUser.set1and2dConn(gc)
 	newUser.set3dConn(gc)
-
 	# print('Num 1st degree Connections: {}'.format(len(newUser.conn1d)))
-	print('1st degree Connection: {}'.format(newUser.conn1d[10]))
+	sorted2 = newUser.conn1d.sort()
+	print('1st degree Connection: {}'.format(newUser.conn1d))
 	# print('Num 2nd degree Connections: {}'.format(len(newUser.conn2d)))
 	print('2nd degree Connection: {}'.format(newUser.conn2d[10]))
 	# print('Num 3rd degree connections: {}'.format(len(newUser.conn3d)))
